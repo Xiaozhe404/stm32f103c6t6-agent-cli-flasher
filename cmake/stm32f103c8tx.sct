@@ -1,0 +1,27 @@
+;******************************************************************************
+; Scatter file - STM32F103C8T6 (64 KB Flash / 20 KB SRAM)
+;
+; Layout notes:
+;   * RW_IRAM1 stops at 0x20004F00 so the last 256 bytes stay reserved for the
+;     crash blackbox (.noinit). Keeping it in a separate UNINIT region is what
+;     makes the record survive a reset.
+;   * The stack lives inside RW_IRAM1 and grows down from 0x20004F00, so it can
+;     never corrupt the blackbox.
+;******************************************************************************
+
+LR_IROM1 0x08000000 0x00010000  {
+  ER_IROM1 0x08000000 0x00010000  {
+   *.o (RESET, +First)
+   *(InRoot$$Sections)
+   .ANY (+RO)
+   .ANY (+XO)
+  }
+
+  RW_IRAM1 0x20000000 0x00004F00  {
+   .ANY (+RW +ZI)
+  }
+
+  BLACKBOX 0x20004F00 UNINIT 0x00000100  {
+   *(.noinit)
+  }
+}

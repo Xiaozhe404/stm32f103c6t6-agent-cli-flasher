@@ -1,0 +1,29 @@
+# Build outputs
+build/
+!build/.gitkeep
+
+# Captured console logs
+logs/
+
+# Downloaded STM32CubeF1 / HAL / CMSIS (recreated by tools/setup.ps1)
+external/
+
+# Arm / Keil artifacts that can leak out of the build tree
+*.axf
+*.bin
+*.hex
+*.map
+*.o
+*.d
+*.crf
+*.lst
+*.dep
+*.uvguix.*
+Objects/
+Listings/
+
+# OS / editor noise
+Thumbs.db
+.DS_Store
+.settings/
+.vscode/

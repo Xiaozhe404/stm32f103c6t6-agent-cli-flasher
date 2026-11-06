@@ -1,0 +1,11 @@
+# clangd reads the CMake-generated compile database. armclang's triple
+# (arm-arm-none-eabi) is not a triple clangd understands, so translate it.
+CompileFlags:
+  CompilationDatabase: build/Debug
+  Remove:
+    - --target=arm-arm-none-eabi
+  Add:
+    - --target=armv7m-none-eabi
+
+Index:
+  Background: Build
