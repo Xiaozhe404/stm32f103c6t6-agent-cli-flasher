@@ -36,15 +36,17 @@ Do not re-derive these, and do not "fix" them back to an F103C8T6 layout:
 | RAM readable up to | `0x200027FF`; `0x20002800` onwards reads fail |
 | `RCC_CFGR` after boot | `0x001D040A` → SWS=PLL, PLLSRC=HSE, PLLMUL=x9 = 72 MHz |
 | Log ring buffer after ~10 s | `head == tail == 392`, `dropped == 0`, `s_ready == 1` |
+| UART capture on COM7 | `[BOOT] board=STM32F103C6T6 … [BOOT] ready`, `[HB] n=… dropped=0` |
 
 Two consequences the next agent should know:
 
 1. The part is a 32 KB / 10 KB device sold as a Blue Pill. Building for it also
    runs unchanged on a real C8T6, so this layout is the safe default.
-2. The ST-LINK's virtual COM port (COM7) is **not** wired to PA9/PA10 on this
-   rig, so `tools\monitor.ps1` sees zero bytes even though the firmware is
-   transmitting. Wire VCP-TX → PA10 and VCP-RX → PA9 (and GND) before trusting
-   `tools\verify.ps1`'s observe step.
+2. The ST-LINK virtual COM port (COM7) **is** wired to the target and
+   `tools\verify.ps1` passes end to end. Anything that reads memory through
+   STM32CubeProgrammer (`-c … -r32`) leaves the CPU **halted**, so the console
+   goes silent afterwards — run `STM32_Programmer_CLI -c port=SWD -rst` (or
+   reflash) before believing "the board stopped logging".
 
 ---
 
