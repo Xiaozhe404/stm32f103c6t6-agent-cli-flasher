@@ -3,6 +3,7 @@
 #   tools\monitor.ps1 -List
 #   tools\monitor.ps1 -Seconds 15
 #   tools\monitor.ps1 -Port COM5 -Expect '\[BOOT\] ready','\[HB\]' -Seconds 20
+#   tools\monitor.ps1 -Reset -Seconds 10   # reset first, so [BOOT] is captured
 #
 # Exit code 0 = the capture window elapsed and every -Expect pattern matched.
 # Without -Port the script picks the first real USB-serial adapter; Bluetooth
@@ -20,7 +21,9 @@ param(
     [string[]]$Expect = @(),
     [switch]$List,
     [switch]$Quiet,
-    [switch]$Raw          # do not add a timestamp prefix per chunk
+    [switch]$Raw,         # do not add a timestamp prefix per chunk
+    [switch]$Reset        # reset the target after the port is open, so the
+                          # boot sequence is captured instead of racing it
 )
 
 . "$PSScriptRoot\env.ps1"
@@ -98,9 +101,27 @@ catch {
     exit 1
 }
 
+# A board that has been running since the last flash has already printed its
+# [BOOT] lines and the ST-LINK VCP retains only a short backlog. Resetting here,
+# after the port is open, makes the boot sequence part of the capture window.
+if ($Reset) {
+    if (-not $script:ProgrammerCli) {
+        Write-Warn '-Reset ignored: STM32_Programmer_CLI not found.'
+    }
+    else {
+        $serial.DiscardInBuffer()
+        Write-Step 'Resetting target'
+        & $script:ProgrammerCli -c port=SWD mode=normal -rst 2>&1 | Out-Null
+        Start-Sleep -Milliseconds 300
+    }
+}
+
 $deadline  = (Get-Date).AddSeconds($Seconds)
 $collected = New-Object System.Text.StringBuilder
 $pending   = @($Expect)
+# A serial read can split a line anywhere, so a timestamp may only be added when
+# the stream really is at the beginning of a line.
+$atLineStart = $true
 
 try {
     while ((Get-Date) -lt $deadline) {
@@ -122,7 +143,14 @@ try {
             $text = $chunk
             if (-not $Raw) {
                 $stamp = (Get-Date).ToString('HH:mm:ss.fff')
-                $text = ($chunk -split "`n" | ForEach-Object { "$stamp|$_" }) -join "`n"
+                $parts = $chunk -split "`n"
+                for ($i = 0; $i -lt $parts.Length; $i++) {
+                    if ($i -gt 0 -or $atLineStart) {
+                        $parts[$i] = "$stamp|$($parts[$i])"
+                    }
+                }
+                $text = $parts -join "`n"
+                $atLineStart = $chunk.EndsWith("`n")
             }
             [System.IO.File]::AppendAllText(
                 $logFull, $text, (New-Object System.Text.UTF8Encoding($false)))

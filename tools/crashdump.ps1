@@ -52,14 +52,26 @@ function Get-SymbolTable {
     $table = @()
     if (-not (Test-Path -LiteralPath $TablePath)) { return $table }
     foreach ($textLine in Get-Content -LiteralPath $TablePath) {
-        # "<index>  <name>  0xADDRESS  <attr>  <n>  <Code|Sect|Data|File>  ..."
-        if ($textLine -match '^\s*\d+\s+(\S+)\s+0x([0-9a-fA-F]{8})\s+(\S+)\s+(\S+)\s+(\S+)') {
-            $kind = $matches[5]
-            if ($kind -eq 'Code' -or $kind -eq 'Sect') {
-                $table += [pscustomobject]@{
-                    Name    = $matches[1]
-                    Address = [Convert]::ToUInt32($matches[2], 16)
-                }
+        # "<index>  <name>  0xADDRESS  <attr>  <n>  <Code|Sect|Data|File>  <..>  0xSIZE"
+        $cols = $textLine.Trim() -split '\s+'
+        if ($cols.Length -lt 6) { continue }
+        if ($cols[2] -notmatch '^0x[0-9a-fA-F]{8}$') { continue }
+        $kind = $cols[5]
+        if ($kind -eq 'Code' -or $kind -eq 'Sect') {
+            $size = [uint32]0
+            $last = $cols[$cols.Length - 1]
+            if ($last -match '^0x([0-9a-fA-F]+)$') {
+                $size = [Convert]::ToUInt32($matches[1], 16)
+            }
+            # Code symbols carry the Thumb bit in bit 0; it is not part of the
+            # address. (0xFFFFFFFE cannot be used as a [uint32] literal here -
+            # PowerShell 5.1 parses that hex constant as Int32 -2.)
+            $addr = [Convert]::ToUInt32($cols[2], 16)
+            $addr = [uint32]($addr - ($addr -band 1))
+            $table += [pscustomobject]@{
+                Name    = $cols[1]
+                Address = $addr
+                Size    = $size
             }
         }
     }
@@ -69,17 +81,30 @@ function Get-SymbolTable {
 function Resolve-CodeSymbol {
     param($Table, [uint32]$Address)
 
-    if ($Address -lt $flashStart -or $Address -ge $flashEnd) {
+    # Fault frames can hold PC/LR with the Thumb bit still set.
+    $pc = [uint32]($Address - ($Address -band 1))
+
+    if ($pc -lt $flashStart -or $pc -ge $flashEnd) {
         return 'not a flash address'
     }
+
+    # Prefer the symbol whose size range contains the address. "Nearest below"
+    # alone names the wrong function when the real one carries the Thumb bit
+    # and therefore compares as numerically greater than the PC.
+    foreach ($sym in $Table) {
+        if ($sym.Size -gt 0 -and $pc -ge $sym.Address -and $pc -lt ($sym.Address + $sym.Size)) {
+            return ("{0}+0x{1:x}" -f $sym.Name, ($pc - $sym.Address))
+        }
+    }
+
     $best = $null
     foreach ($sym in $Table) {
-        if ($sym.Address -le $Address -and ($null -eq $best -or $sym.Address -gt $best.Address)) {
+        if ($sym.Address -le $pc -and ($null -eq $best -or $sym.Address -gt $best.Address)) {
             $best = $sym
         }
     }
     if ($null -eq $best) { return 'no symbol below address' }
-    return ("{0}+0x{1:x}" -f $best.Name, ($Address - $best.Address))
+    return ("{0}+0x{1:x}" -f $best.Name, ($pc - $best.Address))
 }
 
 $symTable = @(Get-SymbolTable $SymbolsFile)

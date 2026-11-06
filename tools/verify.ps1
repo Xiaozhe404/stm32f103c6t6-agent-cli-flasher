@@ -79,6 +79,7 @@ $monitorArgs = @{
     Seconds = $Seconds
     Expect  = $Expect
     Log     = "logs/verify-$Config.log"
+    Reset   = $true      # flash leaves the board running; reset it while we listen
 }
 if ($Port) { $monitorArgs['Port'] = $Port }
 & (Join-Path $PSScriptRoot 'monitor.ps1') @monitorArgs
