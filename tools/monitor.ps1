@@ -105,15 +105,18 @@ catch {
 # [BOOT] lines and the ST-LINK VCP retains only a short backlog. Resetting here,
 # after the port is open, makes the boot sequence part of the capture window.
 if ($Reset) {
-    if (-not $script:ProgrammerCli) {
-        Write-Warn '-Reset ignored: STM32_Programmer_CLI not found.'
-    }
-    else {
+    # The ST-LINK virtual COM port stops delivering bytes as soon as the SWD
+    # interface is used, so a debugger-driven reset makes the capture empty.
+    # Ask the firmware to reset itself instead (app.c watches for "@RST").
+    Write-Step 'Resetting target via console'
+    try {
         $serial.DiscardInBuffer()
-        Write-Step 'Resetting target'
-        & $script:ProgrammerCli -c port=SWD mode=normal -rst 2>&1 | Out-Null
-        Start-Sleep -Milliseconds 300
+        $serial.Write("@RST`r`n")
     }
+    catch {
+        Write-Warn "-Reset failed: $($_.Exception.Message)"
+    }
+    Start-Sleep -Milliseconds 150
 }
 
 $deadline  = (Get-Date).AddSeconds($Seconds)

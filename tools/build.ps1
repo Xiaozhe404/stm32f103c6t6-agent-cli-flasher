@@ -60,13 +60,13 @@ function Assert-KeilSourcesMatch {
         $expected += "../$($m.Groups[1].Value)/Src/$($m.Groups[2].Value)"
     }
     foreach ($m in [regex]::Matches($cmake, '\$\{HAL_DIR\}/Src/([A-Za-z0-9_]+\.c)')) {
-        $expected += "../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/$($m.Groups[1].Value)"
+        $expected += "../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/$($m.Groups[1].Value)"
     }
     foreach ($m in [regex]::Matches($cmake, '\$\{CMSIS_DEVICE_DIR\}/Source/Templates/([A-Za-z0-9_]+\.c)')) {
-        $expected += "../external/cubeF1/STM32CubeF1-master/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/$($m.Groups[1].Value)"
+        $expected += "../external/cubeF1/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/$($m.Groups[1].Value)"
     }
     foreach ($m in [regex]::Matches($cmake, '\$\{CMSIS_DEVICE_DIR\}/Source/Templates/arm/([A-Za-z0-9_]+\.s)')) {
-        $expected += "../external/cubeF1/STM32CubeF1-master/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/arm/$($m.Groups[1].Value)"
+        $expected += "../external/cubeF1/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/arm/$($m.Groups[1].Value)"
     }
 
     $actual = Get-KeilFileNames $ProjectFile

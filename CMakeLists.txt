@@ -29,7 +29,7 @@ if(NOT STM32CUBE_F1_ROOT)
   if(DEFINED ENV{STM32CUBE_F1_ROOT})
     set(STM32CUBE_F1_ROOT "$ENV{STM32CUBE_F1_ROOT}")
   else()
-    set(STM32CUBE_F1_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/cubeF1/STM32CubeF1-master")
+    set(STM32CUBE_F1_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/cubeF1/STM32CubeF1")
   endif()
 endif()
 if(NOT EXISTS "${STM32CUBE_F1_ROOT}/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f1xx.h")
@@ -50,6 +50,7 @@ set(APP_SOURCES
   App/Src/app.c
   App/Src/ringbuffer.c
   Bsp/Src/bsp_board.c
+  Bsp/Src/bsp_diag.c
   Bsp/Src/bsp_log.c
   Bsp/Src/bsp_fault.c
   Core/Src/main.c
@@ -67,6 +68,7 @@ set(HAL_SOURCES
   ${HAL_DIR}/Src/stm32f1xx_hal_flash.c
   ${HAL_DIR}/Src/stm32f1xx_hal_flash_ex.c
   ${HAL_DIR}/Src/stm32f1xx_hal_gpio.c
+  ${HAL_DIR}/Src/stm32f1xx_hal_iwdg.c
   ${HAL_DIR}/Src/stm32f1xx_hal_pwr.c
   ${HAL_DIR}/Src/stm32f1xx_hal_rcc.c
   ${HAL_DIR}/Src/stm32f1xx_hal_rcc_ex.c
@@ -158,7 +160,10 @@ add_custom_command(
   COMMAND ${ARMCLANG_BIN}/fromelf.exe --bin --output ${BIN} ${AXF}
   COMMAND ${ARMCLANG_BIN}/fromelf.exe --text -z --output ${SIZES} ${AXF}
   COMMAND ${ARMCLANG_BIN}/fromelf.exe --text -s --output ${SYMBOLS} ${AXF}
-  DEPENDS fw_obj ${STARTUP_O}
+  # The object files must be listed as dependencies explicitly: using
+  # $<TARGET_OBJECTS:fw_obj> in COMMAND alone does not make ninja relink when a
+  # single .o changes, which silently ships a stale image.
+  DEPENDS fw_obj $<TARGET_OBJECTS:fw_obj> ${STARTUP_O}
   COMMENT "armlink: firmware.axf"
   COMMAND_EXPAND_LISTS
   VERBATIM

@@ -15,6 +15,7 @@ static uint8_t          s_storage[LOG_QUEUE_SIZE];
 static ringbuffer_t     s_queue;
 static UART_HandleTypeDef s_huart;
 static uint8_t          s_ready;
+static uint32_t         s_tx_errors;   /* HAL_UART_Transmit did not return OK */
 
 void HAL_UART_MspInit(UART_HandleTypeDef *huart)
 {
@@ -88,8 +89,28 @@ void bsp_log_flush(void)
 
     pending = rb_read(&s_queue, chunk, pending);
     if (pending > 0U) {
-        (void)HAL_UART_Transmit(&s_huart, chunk, (uint16_t)pending, LOG_TX_TIMEOUT_MS);
+        /* A transmit that fails still releases the bytes, so without counting
+         * the failures a dead console looks exactly like a working one. */
+        if (HAL_UART_Transmit(&s_huart, chunk, (uint16_t)pending,
+                              LOG_TX_TIMEOUT_MS) != HAL_OK) {
+            s_tx_errors++;
+        }
     }
+}
+
+uint32_t bsp_log_tx_errors(void)
+{
+    return s_tx_errors;
+}
+
+int bsp_log_read_byte(uint8_t *out)
+{
+    if (s_ready == 0U || out == NULL) {
+        return 0;
+    }
+    /* Timeout 0: returns immediately when RX is empty, so the control loop
+     * keeps its timing. */
+    return (HAL_UART_Receive(&s_huart, out, 1U, 0U) == HAL_OK) ? 1 : 0;
 }
 
 int bsp_log_printf(const char *fmt, ...)

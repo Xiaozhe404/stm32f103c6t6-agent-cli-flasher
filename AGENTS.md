@@ -36,17 +36,20 @@ Do not re-derive these, and do not "fix" them back to an F103C8T6 layout:
 | RAM readable up to | `0x200027FF`; `0x20002800` onwards reads fail |
 | `RCC_CFGR` after boot | `0x001D040A` → SWS=PLL, PLLSRC=HSE, PLLMUL=x9 = 72 MHz |
 | Log ring buffer after ~10 s | `head == tail == 392`, `dropped == 0`, `s_ready == 1` |
-| UART capture on COM7 | `[BOOT] board=STM32F103C6T6 … [BOOT] ready`, `[HB] n=… dropped=0` |
+| Stack high-water mark | `stack=408/1024` at idle |
+| Reset cause on a debugger reset | `[BOOT] reset=PIN\|SFT` |
+| UART capture on COM7 | `[BOOT] board=STM32F103C6T6 … [BOOT] ready`, `[HB] … txerr=0` |
 
 Two consequences the next agent should know:
 
 1. The part is a 32 KB / 10 KB device sold as a Blue Pill. Building for it also
    runs unchanged on a real C8T6, so this layout is the safe default.
 2. The ST-LINK virtual COM port (COM7) **is** wired to the target and
-   `tools\verify.ps1` passes end to end. Anything that reads memory through
-   STM32CubeProgrammer (`-c … -r32`) leaves the CPU **halted**, so the console
-   goes silent afterwards — run `STM32_Programmer_CLI -c port=SWD -rst` (or
-   reflash) before believing "the board stopped logging".
+   `tools\verify.ps1` passes end to end when the cable is healthy. Two traps:
+   anything that reads memory through STM32CubeProgrammer (`-c … -r32`) leaves
+   the CPU **halted**, and using the SWD interface at all makes the virtual COM
+   port stop delivering bytes until the ST-LINK is re-plugged. Capture and debug
+   are mutually exclusive.
 
 ---
 
@@ -138,8 +141,10 @@ exits 0. Never claim a firmware change works from reading the code alone.
 ## 5. Hard constraints on this part
 
 1. **32 KB flash / 10 KB RAM.** The build prints totals; `tools\size.ps1` enforces
-   a budget. Stack is 1 KB and the crash blackbox reserves the last 256 bytes of
-   RAM (`0x20002700`–`0x200027FF`). Do not grow the stack without re-measuring.
+   a budget. Memory map: RW+ZI at `0x20000000` (0x2300), stack at `0x20002300`
+   (0x400, its own scatter region so the linker owns the bounds), crash blackbox
+   at `0x20002700` (0x100). `[HB] ... stack=used/size` is the measured high-water
+   mark — watch it after adding call depth.
 2. **No `%f` in printf.** Floating-point formatting pulls in several KB of
    library code. Log integers and scale them (`temp_mc` = millidegrees).
 3. **No blocking in interrupt context.** ISRs set a flag or push to a ring
@@ -163,18 +168,31 @@ exits 0. Never claim a firmware change works from reading the code alone.
 - Every public function has a one-line comment saying *why* it exists, not what
   the code obviously does.
 - Log lines are machine readable and stable:
-  `[BOOT] ...`, `[HB] n=... t=...`, `[WARN] ...`, `[FAULT] ...`.
+  `[BOOT] ...`, `[HB] n=... t=... dropped=... txerr=... stack=used/size`,
+  `[WARN] ...`, `[FAULT] ...`.
   `tools\verify.ps1` greps for these — changing the format changes the tests.
+- `[BOOT] reset=` names the last reset cause (`POR`, `PIN`, `SFT`, `IWDG`,
+  `WWDG`, `LPWR`, joined with `|`). Read it before theorising about a reboot.
+- `txerr` counts rejected UART transmits. A non-zero value means the console is
+  not actually delivering, even though the ring buffer still drains.
+- The console is bidirectional: `@RST` makes the firmware reset itself. That is
+  how `tools\monitor.ps1 -Reset` captures a boot sequence.
+- **Never touch SWD while capturing the console.** The ST-LINK virtual COM port
+  stops delivering bytes as soon as the debug interface is used, and only a USB
+  replug brings it back.
 
 ---
 
 ## 7. Debugging playbook
 
-1. Run `tools\monitor.ps1 -Seconds 30` and reproduce.
-2. If the board went silent or reset itself, run `tools\crashdump.ps1`. The
+1. Run `tools\monitor.ps1 -Seconds 30` and reproduce. If you need the boot
+   sequence, add `-Reset` (sends `@RST`).
+2. Read `[BOOT] reset=...` first. `IWDG` means the main loop stopped being
+   kicked - look for a blocking call, not for a crash.
+3. If the board went silent or reset itself, run `tools\crashdump.ps1`. The
    firmware stores PC/LR/CFSR/HFSR in `.noinit`, resets, and prints the record
    on the next boot. `cause=...` lines name the fault bits.
-3. Map PC to source: `tools\crashdump.ps1` already does symbol lookup; for
+4. Map PC to source: `tools\crashdump.ps1` already does symbol lookup; for
    file:line it uses `arm-none-eabi-gdb` when available.
 4. To prove the blackbox path end to end, configure with
    `-DBSP_FAULT_SELFTEST=ON` and call `bsp_fault_trigger_selftest()`. The option
@@ -192,6 +210,12 @@ exits 0. Never claim a firmware change works from reading the code alone.
 | CMake / Ninja | ST VS Code extension bundles under `%LOCALAPPDATA%\stm32cube\bundles` |
 | STM32_Programmer_CLI | `%LOCALAPPDATA%\stm32cube\bundles\programmer\*\bin` |
 | Host gcc (unit tests) | `D:\mingw64\bin\gcc.exe` |
+| Pinned firmware packages | `external/versions.json` (tags + SHA-256) |
+
+`tools\setup.ps1` downloads each package at a **pinned tag** and refuses to use
+an archive whose SHA-256 does not match, so the same commit rebuilds the same
+firmware. Bumping a version means editing the table in `setup.ps1` and
+re-running it with `-Force`; the destination paths never contain the version.
 
 `tools\env.ps1` resolves all of these; override with `ARMCLANG_ROOT`, `UV4_PATH`,
 `STM32_PROGRAMMER_CLI` if the install moves. PowerShell 5.1 only — no `&&`,

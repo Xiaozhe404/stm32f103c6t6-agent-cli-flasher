@@ -13,6 +13,7 @@
 #include "app.h"
 #include "board.h"
 #include "bsp_board.h"
+#include "bsp_diag.h"
 #include "bsp_fault.h"
 #include "bsp_log.h"
 
@@ -24,6 +25,8 @@ static void Error_Handler(void);
 int main(void)
 {
     HAL_Init();
+    bsp_diag_init();    /* reset cause, stack paint, watchdog - before anything
+                         * that can block, so a hang here is still caught */
     bsp_board_init();   /* LED first: it is the only sign of life if clocks fail */
     SystemClock_Config();
 
@@ -35,6 +38,7 @@ int main(void)
     for (;;) {
         app_poll();
         bsp_log_flush();
+        bsp_diag_kick();
     }
 }
 

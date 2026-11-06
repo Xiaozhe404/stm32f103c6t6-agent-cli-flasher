@@ -339,7 +339,7 @@
               <MiscControls>-std=c99 -ffunction-sections -fdata-sections -fno-common -Wextra -Wno-unused-parameter</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103x6</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Include;../App/Include;../Bsp/Include;../external/cubeF1/STM32CubeF1-master/Drivers/CMSIS/Core/Include;../external/cubeF1/STM32CubeF1-master/Drivers/CMSIS/Device/ST/STM32F1xx/Include;../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Inc</IncludePath>
+              <IncludePath>../Core/Include;../App/Include;../Bsp/Include;../external/cubeF1/STM32CubeF1/Drivers/CMSIS/Core/Include;../external/cubeF1/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Include;../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -404,6 +404,11 @@
               <FilePath>../Bsp/Src/bsp_board.c</FilePath>
             </File>
             <File>
+              <FileName>bsp_diag.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Bsp/Src/bsp_diag.c</FilePath>
+            </File>
+            <File>
               <FileName>bsp_log.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Bsp/Src/bsp_log.c</FilePath>
@@ -436,12 +441,12 @@
             <File>
               <FileName>system_stm32f1xx.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/system_stm32f1xx.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/system_stm32f1xx.c</FilePath>
             </File>
             <File>
               <FileName>startup_stm32f103x6.s</FileName>
               <FileType>2</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/arm/startup_stm32f103x6.s</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/arm/startup_stm32f103x6.s</FilePath>
             </File>
           </Files>
         </Group>
@@ -451,57 +456,62 @@
             <File>
               <FileName>stm32f1xx_hal.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_cortex.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_dma.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_dma.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_dma.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_exti.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_exti.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_exti.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_flash.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_flash_ex.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash_ex.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash_ex.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_gpio.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f1xx_hal_iwdg.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_iwdg.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_pwr.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pwr.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pwr.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_rcc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_rcc_ex.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_uart.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -840,7 +850,7 @@
               <MiscControls>-std=c99 -ffunction-sections -fdata-sections -fno-common -Wextra -Wno-unused-parameter</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103x6</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Include;../App/Include;../Bsp/Include;../external/cubeF1/STM32CubeF1-master/Drivers/CMSIS/Core/Include;../external/cubeF1/STM32CubeF1-master/Drivers/CMSIS/Device/ST/STM32F1xx/Include;../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Inc</IncludePath>
+              <IncludePath>../Core/Include;../App/Include;../Bsp/Include;../external/cubeF1/STM32CubeF1/Drivers/CMSIS/Core/Include;../external/cubeF1/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Include;../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -905,6 +915,11 @@
               <FilePath>../Bsp/Src/bsp_board.c</FilePath>
             </File>
             <File>
+              <FileName>bsp_diag.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Bsp/Src/bsp_diag.c</FilePath>
+            </File>
+            <File>
               <FileName>bsp_log.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Bsp/Src/bsp_log.c</FilePath>
@@ -937,12 +952,12 @@
             <File>
               <FileName>system_stm32f1xx.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/system_stm32f1xx.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/system_stm32f1xx.c</FilePath>
             </File>
             <File>
               <FileName>startup_stm32f103x6.s</FileName>
               <FileType>2</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/arm/startup_stm32f103x6.s</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/arm/startup_stm32f103x6.s</FilePath>
             </File>
           </Files>
         </Group>
@@ -952,57 +967,62 @@
             <File>
               <FileName>stm32f1xx_hal.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_cortex.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_dma.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_dma.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_dma.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_exti.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_exti.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_exti.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_flash.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_flash_ex.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash_ex.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash_ex.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_gpio.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f1xx_hal_iwdg.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_iwdg.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_pwr.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pwr.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pwr.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_rcc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_rcc_ex.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.c</FilePath>
             </File>
             <File>
               <FileName>stm32f1xx_hal_uart.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../external/cubeF1/STM32CubeF1-master/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c</FilePath>
+              <FilePath>../external/cubeF1/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c</FilePath>
             </File>
           </Files>
         </Group>

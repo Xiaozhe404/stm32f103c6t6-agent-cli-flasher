@@ -29,4 +29,12 @@ int    bsp_log_printf(const char *fmt, ...);
 /* Bytes lost because the queue was full - a sanity metric for timing bugs. */
 uint32_t bsp_log_dropped(void);
 
+/* Transmit attempts that HAL rejected. Non-zero means the console is broken
+ * even though the queue still drains. */
+uint32_t bsp_log_tx_errors(void);
+
+/* Non-blocking read of one received byte. Returns 1 when *out was filled.
+ * Used by the console command parser in app.c. */
+int    bsp_log_read_byte(uint8_t *out);
+
 #endif /* BSP_LOG_H */

@@ -22,6 +22,7 @@ extern "C" {
 #define HAL_PWR_MODULE_ENABLED
 #define HAL_RCC_MODULE_ENABLED
 #define HAL_UART_MODULE_ENABLED
+#define HAL_IWDG_MODULE_ENABLED
 
 /* ########################## Oscillator Values ############################# */
 #if !defined  (HSE_VALUE)
@@ -85,6 +86,9 @@ extern "C" {
 
 #ifdef HAL_UART_MODULE_ENABLED
   #include "stm32f1xx_hal_uart.h"
+#endif
+#ifdef HAL_IWDG_MODULE_ENABLED
+  #include "stm32f1xx_hal_iwdg.h"
 #endif
 
 #ifdef USE_FULL_ASSERT

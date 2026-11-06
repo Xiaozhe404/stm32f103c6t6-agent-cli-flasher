@@ -21,7 +21,7 @@ param(
 
 . "$PSScriptRoot\env.ps1"
 
-$cubeRoot = Join-Path $script:RepoRoot 'external\cubeF1\STM32CubeF1-master'
+$cubeRoot = Join-Path $script:RepoRoot 'external\cubeF1\STM32CubeF1'
 $marker   = Join-Path $cubeRoot 'Drivers\CMSIS\Device\ST\STM32F1xx\Include\stm32f1xx.h'
 $halMarker = Join-Path $cubeRoot 'Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.c'
 
@@ -103,60 +103,101 @@ if ($SkipDownload) {
 } elseif ((Test-Path -LiteralPath $marker) -and (Test-Path -LiteralPath $halMarker) -and (-not $Force)) {
     Write-Ok 'STM32CubeF1 already present, skipping download.'
 } else {
-    Write-Step 'Downloading STM32CubeF1 (HAL + CMSIS)'
-    $external = Join-Path $script:RepoRoot 'external'
-    New-Item -ItemType Directory -Force -Path $external | Out-Null
-
-    $jobs = @(
-        @{ Url = 'https://codeload.github.com/STMicroelectronics/STM32CubeF1/tar.gz/refs/heads/master'; File = 'cubeF1.tar.gz' },
-        @{ Url = 'https://codeload.github.com/STMicroelectronics/stm32f1xx_hal_driver/tar.gz/refs/heads/master'; File = 'hal.tar.gz' },
-        @{ Url = 'https://codeload.github.com/STMicroelectronics/cmsis_device_f1/tar.gz/refs/heads/master'; File = 'cmsis.tar.gz' }
+    # Pinned to release tags, each with a checksum. Tracking a branch would let
+    # the same repository produce a different firmware tomorrow, which would
+    # quietly invalidate every "the two tracks are byte-identical" claim.
+    $packages = @(
+        @{ Name = 'STM32CubeF1'
+           Tag  = 'v1.8.7'
+           Sha  = '3f1b2948ba485671a81b0f25132b77c09bf5209146d4d731ef0cf70ecd74aab3'
+           Url  = 'https://codeload.github.com/STMicroelectronics/STM32CubeF1/tar.gz/refs/tags/v1.8.7' },
+        @{ Name = 'stm32f1xx_hal_driver'
+           Tag  = 'v1.1.10'
+           Sha  = 'dac985f582b763e8a54aee8329fc7cc86e5690d4ed97f48f7bb7a89eb23f94ca'
+           Url  = 'https://codeload.github.com/STMicroelectronics/stm32f1xx_hal_driver/tar.gz/refs/tags/v1.1.10' },
+        @{ Name = 'cmsis_device_f1'
+           Tag  = 'v4.3.5'
+           Sha  = '2994ffe58af1f819928f11840359565e0293e91dfb840661da77c2e02de24ca3'
+           Url  = 'https://codeload.github.com/STMicroelectronics/cmsis_device_f1/tar.gz/refs/tags/v4.3.5' }
     )
 
-    foreach ($job in $jobs) {
-        $target = Join-Path $external $job.File
-        if ((Test-Path -LiteralPath $target) -and (-not $Force)) {
-            Write-Ok "$($job.File) cached"
-            continue
+    $external  = Join-Path $script:RepoRoot 'external'
+    $downloads = Join-Path $external 'downloads'
+    New-Item -ItemType Directory -Force -Path $downloads | Out-Null
+
+    foreach ($pkg in $packages) {
+        $file = Join-Path $downloads "$($pkg.Name)-$($pkg.Tag).tar.gz"
+        $have = Test-Path -LiteralPath $file
+        if ($have) {
+            $actual = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLower()
+            if ($actual -ne $pkg.Sha) {
+                Write-Warn "$($pkg.Name): cached archive does not match the pinned checksum, fetching again"
+                $have = $false
+            }
         }
-        Write-Step "GET $($job.Url)"
-        & curl.exe -sS -L --max-time 600 -o $target $job.Url
-        if ($LASTEXITCODE -ne 0) {
-            Write-Fail "download failed ($LASTEXITCODE). Check network access to codeload.github.com."
+        if (-not $have) {
+            Write-Step "GET $($pkg.Name) $($pkg.Tag)"
+            & curl.exe -sS -L --max-time 900 -o $file $pkg.Url
+            if ($LASTEXITCODE -ne 0) {
+                Write-Fail "download failed ($LASTEXITCODE). Check network access to codeload.github.com."
+                exit 1
+            }
+            $actual = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLower()
+        }
+        if ($actual -ne $pkg.Sha) {
+            Write-Fail "$($pkg.Name): SHA256 mismatch. expected $($pkg.Sha), got $actual"
             exit 1
         }
+        Write-Ok "$($pkg.Name) $($pkg.Tag) checksum verified"
     }
 
     Write-Step 'Extracting'
-    $cubeTmp = Join-Path $external '_cube'
-    if (Test-Path -LiteralPath $cubeTmp) { Remove-Item $cubeTmp -Recurse -Force }
-    if (Test-Path -LiteralPath (Join-Path $external 'cubeF1')) { Remove-Item (Join-Path $external 'cubeF1') -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path $cubeTmp | Out-Null
-    tar -xzf (Join-Path $external 'cubeF1.tar.gz') -C $cubeTmp
-    $cubeSrc = Get-ChildItem $cubeTmp -Directory | Select-Object -First 1
-    $cubeDir = Join-Path $external 'cubeF1'
-    New-Item -ItemType Directory -Force -Path $cubeDir | Out-Null
-    Move-Item $cubeSrc.FullName (Join-Path $cubeDir 'STM32CubeF1-master')
+    $stage = Join-Path $external '_stage'
+    if (Test-Path -LiteralPath $stage) { Remove-Item $stage -Recurse -Force }
+    New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
-    # CubeF1 references the HAL and CMSIS device as git submodules (empty dirs
-    # in a tarball), so graft the two repositories in their place.
-    $subTmp = Join-Path $external '_sub'
-    if (Test-Path -LiteralPath $subTmp) { Remove-Item $subTmp -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path $subTmp | Out-Null
+    $cubeF1Dir = Join-Path $external 'cubeF1'
+    if (Test-Path -LiteralPath $cubeF1Dir) { Remove-Item $cubeF1Dir -Recurse -Force }
 
-    tar -xzf (Join-Path $external 'hal.tar.gz') -C $subTmp
-    $halSrc = Get-ChildItem $subTmp -Directory | Select-Object -First 1
-    $halDst = Join-Path $cubeRoot 'Drivers\STM32F1xx_HAL_Driver'
-    if (Test-Path -LiteralPath $halDst) { Remove-Item $halDst -Recurse -Force }
-    Move-Item $halSrc.FullName $halDst
+    function Expand-Package {
+        param([string]$Name, [string]$Tag, [string]$Destination)
+        $work = Join-Path $stage $Name
+        New-Item -ItemType Directory -Force -Path $work | Out-Null
+        tar -xzf (Join-Path $downloads "$Name-$Tag.tar.gz") -C $work
+        $top = Get-ChildItem $work -Directory | Select-Object -First 1
+        if (-not $top) {
+            Write-Fail "${Name}: archive looked empty"
+            exit 1
+        }
+        if (Test-Path -LiteralPath $Destination) { Remove-Item $Destination -Recurse -Force }
+        $parent = Split-Path -Parent $Destination
+        if (-not (Test-Path -LiteralPath $parent)) {
+            New-Item -ItemType Directory -Force -Path $parent | Out-Null
+        }
+        Move-Item $top.FullName $Destination
+        Remove-Item $work -Recurse -Force
+    }
 
-    tar -xzf (Join-Path $external 'cmsis.tar.gz') -C $subTmp
-    $cmsisSrc = Get-ChildItem $subTmp -Directory | Select-Object -First 1
-    $cmsisDst = Join-Path $cubeRoot 'Drivers\CMSIS\Device\ST\STM32F1xx'
-    if (Test-Path -LiteralPath $cmsisDst) { Remove-Item $cmsisDst -Recurse -Force }
-    Move-Item $cmsisSrc.FullName $cmsisDst
+    # The release tree keeps the HAL and the CMSIS device headers as git
+    # submodules, which a tarball leaves empty, so graft the two repositories
+    # into the places the build expects. The destination names carry no version
+    # so that a version bump does not ripple through CMakeLists and the Keil
+    # project; the version is recorded in external/versions.json instead.
+    Expand-Package 'STM32CubeF1'         'v1.8.7'  (Join-Path $cubeF1Dir 'STM32CubeF1')
+    Expand-Package 'stm32f1xx_hal_driver' 'v1.1.10' (Join-Path $cubeRoot 'Drivers\STM32F1xx_HAL_Driver')
+    Expand-Package 'cmsis_device_f1'      'v4.3.5'  (Join-Path $cubeRoot 'Drivers\CMSIS\Device\ST\STM32F1xx')
 
-    Remove-Item $cubeTmp, $subTmp -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+
+    $manifest = [ordered]@{
+        generated = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+        packages  = @($packages | ForEach-Object {
+            [ordered]@{ name = $_.Name; tag = $_.Tag; sha256 = $_.Sha; url = $_.Url }
+        })
+    }
+    $manifest | ConvertTo-Json -Depth 5 |
+        Set-Content -LiteralPath (Join-Path $external 'versions.json') -Encoding UTF8
+    Write-Ok 'wrote external/versions.json'
 }
 
 if (-not (Test-Path -LiteralPath $marker)) {

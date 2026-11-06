@@ -2,11 +2,12 @@
 ; Scatter file - STM32F103C6T6 (32 KB Flash / 10 KB SRAM)
 ;
 ; Layout notes:
-;   * RW_IRAM1 stops at 0x20002700 so the last 256 bytes stay reserved for the
-;     crash blackbox (.noinit). Keeping it in a separate UNINIT region is what
-;     makes the record survive a reset.
-;   * The stack lives inside RW_IRAM1 and grows down from 0x20002700, so it can
-;     never corrupt the blackbox.
+;   * The stack gets its own execution region so its base comes from the linker
+;     (Image$$STACKS$$Base) instead of a hand-kept constant that could silently
+;     drift away from the vendor startup's Stack_Size.
+;   * BLACKBOX keeps the last 256 bytes for the crash record. Keeping it in a
+;     separate UNINIT region is what makes the record survive a reset.
+;   * The stack grows down from 0x20002700, so it can never touch the blackbox.
 ;   * These numbers describe the smallest part this image must run on. Building
 ;     for the low-density layout also runs unchanged on an F103C8T6.
 ;******************************************************************************
@@ -19,8 +20,12 @@ LR_IROM1 0x08000000 0x00008000  {
    .ANY (+XO)
   }
 
-  RW_IRAM1 0x20000000 0x00002700  {
+  RW_IRAM1 0x20000000 0x00002300  {
    .ANY (+RW +ZI)
+  }
+
+  STACKS 0x20002300 UNINIT 0x00000400  {
+   *(STACK)
   }
 
   BLACKBOX 0x20002700 UNINIT 0x00000100  {

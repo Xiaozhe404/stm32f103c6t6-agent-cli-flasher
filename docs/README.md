@@ -79,13 +79,39 @@ start, so the reason for a slow board is visible in the log instead of guessed.
 | Region | Address | Size | Notes |
 |--------|---------|------|-------|
 | Flash | `0x0800_0000` | 32 KB | `LR_IROM1` / `ER_IROM1` |
-| RAM (RW + ZI + stack) | `0x2000_0000` | 0x2700 | 1 KB stack grows down from here |
+| RAM (RW + ZI) | `0x2000_0000` | 0x2300 | application data |
+| Stack | `0x2000_2300` | 0x400 | own region, so the linker owns its bounds |
 | Crash blackbox | `0x2000_2700` | 0x100 | `UNINIT`, survives `NVIC_SystemReset` |
 
 The blackbox is why a crash can be diagnosed after the board has already
 rebooted. It is declared through `#pragma clang section bss` so the section
 stays ZI — armlink only skips initialization for ZI sections inside an UNINIT
 region, and a `section()` attribute would silently zero the record on every boot.
+
+### What the firmware tells you about itself
+
+Every boot prints why it started and every heartbeat prints how close it is to a
+stack overflow:
+
+```
+[BOOT] reset=PIN|SFT
+[HB] n=1 t=500 dropped=0 txerr=0 stack=408/1024
+```
+
+| Field | Meaning |
+|-------|---------|
+| `reset=` | `RCC_CSR` flags: `POR`, `PIN`, `SFT`, `IWDG`, `WWDG`, `LPWR` |
+| `txerr=` | `HAL_UART_Transmit` failures. Non-zero means the console is lying to you |
+| `stack=` | high-water mark / total, measured by painting the unused stack at boot |
+
+An independent watchdog (IWDG, ~2 s) is kicked once per main loop iteration, so
+a firmware that spins forever resets and reports `reset=IWDG` instead of hanging
+silently. It is frozen while a debugger holds the core, so breakpoints do not
+turn into resets.
+
+The console is also an input: sending `@RST` makes the firmware reset itself.
+That is how `tools\monitor.ps1 -Reset` captures a boot sequence without touching
+SWD (see "When it misbehaves").
 
 ### Two build tracks
 
@@ -109,21 +135,24 @@ diverge semantically. As of the last verification they produce **byte-identical
 |------|--------|
 | Boot | reaches `main()` → `app_poll()`, no fault |
 | Clock | `RCC_CFGR = 0x001D040A` → SWS=PLL, PLLSRC=HSE, PLLMUL=x9 = 72 MHz |
-| Console | `[BOOT] board=STM32F103C6T6 … [BOOT] ready`, `[HB] … dropped=0` |
+| Console | `[BOOT] board=STM32F103C6T6 … [BOOT] ready`, `[HB] … txerr=0` |
+| Diagnostics | `[BOOT] reset=PIN\|SFT`, `[HB] … stack=408/1024` |
 | Crash blackbox | forced `UDF` → record → reset → `[FAULT] count=1 cause=UFSR.UNDEFINSTR` |
 | Symbolication | `PC 0x08002b40 -> bsp_fault_trigger_selftest+0x0` |
-| Footprint | Debug 48.5% flash / 22.9% RAM; Release 41.2% / 22.9% |
-| Regression | 11/11 steps exit 0 (both tracks, both configs, on hardware) |
+| Footprint | Debug 55.1% flash / 23.6% RAM; Release 47.7% / 23.6% |
+| Dependencies | pinned to `STM32CubeF1 v1.8.7`, `stm32f1xx_hal_driver v1.1.10`, `cmsis_device_f1 v4.3.5`, each verified by SHA-256 |
 
 ### Known gaps
 
-- Only the LED and the UART exist so far; the HAL opt-in procedure has not been
-  exercised on hardware for a real peripheral.
+- Only the LED and the UART exist so far. The HAL opt-in procedure works (IWDG
+  was added that way) but no real peripheral has been brought up yet.
 - `Core/` is hand-written, not CubeMX output, so "regenerating from an `.ioc`"
   is untested.
 - Unit tests cover `ringbuffer` only. Log formatting and fault-record decoding
   are still untested.
 - No CI: every check is run locally.
+- The reset-cause and watchdog behaviour is verified by reading RAM over SWD;
+  the UART capture still depends on a healthy cable.
 
 ---
 
@@ -188,10 +217,12 @@ COM ports.
 
 | Symptom | Likely cause |
 |---------|--------------|
-| Console is silent but the board ran a moment ago | A memory read through STM32CubeProgrammer (`-c … -r32`) leaves the CPU **halted**. Run `STM32_Programmer_CLI -c port=SWD -rst`, or reflash. |
-| `verify.ps1` sees heartbeats but no `[BOOT]` lines | The boot output happened before the port was open. `monitor.ps1 -Reset` discards the stale buffer and resets the target after opening — `verify.ps1` does this for you. |
+| Console is silent but the board ran a moment ago | A memory read through STM32CubeProgrammer (`-c … -r32`) leaves the CPU **halted**. Run `STM32_Programmer_CLI -c port=SWD -rst -run`, or reflash. |
+| Console goes silent right after any SWD access | The ST-LINK virtual COM port stops delivering bytes while the SWD interface is in use. Never capture and debug at the same time; unplug/replug the ST-LINK to recover. |
+| `verify.ps1` sees heartbeats but no `[BOOT]` lines | The boot output happened before the port was open. `monitor.ps1 -Reset` sends `@RST` so the firmware resets itself with the port already open. |
 | `Cannot convert value "-2" to type UInt32` | PowerShell 5.1 parses `0xFFFFFFFE` as Int32 `-2`. Mask with `x - (x -band 1)` instead of a hex literal. |
 | Script behaves oddly after an edit | `tools/*.ps1` must stay **ASCII-only**; PowerShell 5.1 reads BOM-less scripts as ANSI and mangles non-ASCII. |
+| Board resets every ~2 s | The watchdog is not being kicked: the main loop is stuck. Check `tools\crashdump.ps1` and the `[BOOT] reset=IWDG` line. |
 | Board resets in a loop with no output | Read the blackbox: `tools\crashdump.ps1` names the faulting function. |
 
 ### Where the pieces are
@@ -268,7 +299,8 @@ HAL_Init -> bsp_board_init -> SystemClock_Config -> bsp_log_init
 | 区域 | 地址 | 大小 | 说明 |
 |------|------|------|------|
 | Flash | `0x0800_0000` | 32 KB | `LR_IROM1` / `ER_IROM1` |
-| RAM（RW + ZI + 栈） | `0x2000_0000` | 0x2700 | 1 KB 栈从这里向下长 |
+| RAM（RW + ZI） | `0x2000_0000` | 0x2300 | 应用数据 |
+| 栈 | `0x2000_2300` | 0x400 | 独立区域，边界由链接器给出 |
 | 崩溃黑盒 | `0x2000_2700` | 0x100 | `UNINIT`，跨 `NVIC_SystemReset` 存活 |
 
 黑盒是"板子已经重启过了还能查原因"的关键。它用 `#pragma clang section bss` 声明以保持 ZI 节——armlink 的 `UNINIT` 只对 ZI 节跳过初始化，用 `section()` 属性会变成 RW 节，每次启动都被拷一遍零，记录被悄悄擦掉。
@@ -287,24 +319,45 @@ HAL_Init -> bsp_board_init -> SystemClock_Config -> bsp_log_init
 | Debug | 15,896 B | 15,896 B |
 | Release | 13,496 B | 13,496 B |
 
+### 固件会告诉你什么
+
+每次启动都说清"为什么启动"，每次心跳都说清"栈还剩多少"：
+
+```
+[BOOT] reset=PIN|SFT
+[HB] n=1 t=500 dropped=0 txerr=0 stack=408/1024
+```
+
+| 字段 | 含义 |
+|------|------|
+| `reset=` | `RCC_CSR` 标志：`POR`、`PIN`、`SFT`、`IWDG`、`WWDG`、`LPWR` |
+| `txerr=` | `HAL_UART_Transmit` 失败次数。非零说明串口在骗你 |
+| `stack=` | 已用高水位 / 总量，靠启动时给空闲栈刷图案测得 |
+
+独立看门狗（IWDG，约 2 秒）在主循环里喂一次，所以"死循环"不再表现为静默卡死，而是复位后报 `reset=IWDG`。调试器把核停住时看门狗会被冻结，断点不会变成复位。
+
+串口也是输入通道：发 `@RST` 让固件自己复位——`tools\monitor.ps1 -Reset` 就是这么抓启动日志的，全程不碰 SWD（原因见"出问题时先看这里"）。
+
 ### 实测状态
 
 | 项目 | 结果 |
 |------|------|
 | 启动 | 走到 `main()` → `app_poll()`，无异常 |
 | 时钟 | `RCC_CFGR = 0x001D040A` → SWS=PLL、PLLSRC=HSE、PLLMUL=×9 = 72 MHz |
-| 控制台 | `[BOOT] board=STM32F103C6T6 … [BOOT] ready`，`[HB] … dropped=0` |
+| 控制台 | `[BOOT] board=STM32F103C6T6 … [BOOT] ready`，`[HB] … txerr=0` |
+| 诊断 | `[BOOT] reset=PIN\|SFT`，`[HB] … stack=408/1024` |
 | 崩溃黑盒 | 主动 `UDF` → 记录 → 复位 → `[FAULT] count=1 cause=UFSR.UNDEFINSTR` |
 | 符号化 | `PC 0x08002b40 -> bsp_fault_trigger_selftest+0x0` |
-| 占用 | Debug 48.5% flash / 22.9% RAM；Release 41.2% / 22.9% |
-| 回归 | 11/11 步骤 exit 0（双轨、双配置、含真机） |
+| 占用 | Debug 55.1% flash / 23.6% RAM；Release 47.7% / 23.6% |
+| 依赖 | 钉在 `STM32CubeF1 v1.8.7`、`stm32f1xx_hal_driver v1.1.10`、`cmsis_device_f1 v4.3.5`，逐个 SHA-256 校验 |
 
 ### 已知边界
 
-- 目前只有 LED 和串口；"HAL opt-in 两步法"还没在真机上走过一次真实外设。
+- 目前只有 LED 和串口。HAL opt-in 两步法已经走通（IWDG 就是这么加的），但还没有真实外设上过板。
 - `Core/` 是手写的，不是 CubeMX 产物，"从 `.ioc` 重新生成"这条路未验证。
 - 单测只覆盖 `ringbuffer`；日志格式化和崩溃记录解析还没测。
 - 没有 CI，所有检查都在本地跑。
+- 复位原因和看门狗是通过 SWD 读 RAM 验证的；串口抓取仍然依赖一根健康的线。
 
 ### 操作（对应英文 Part 2）
 
@@ -328,10 +381,12 @@ tools\crashdump.ps1                 # 崩溃现场符号化
 
 | 现象 | 多半是 |
 |------|-------|
-| 串口突然没输出，但刚才还在跑 | 用 CubeProgrammer 读内存（`-c … -r32`）会把 CPU 停在 halt 状态。执行 `STM32_Programmer_CLI -c port=SWD -rst` 或重新烧写。 |
-| `verify.ps1` 只看到心跳、没有 `[BOOT]` | 启动输出在串口打开之前就发完了。`monitor.ps1 -Reset` 会丢缓冲并在打开端口后复位；`verify.ps1` 已默认启用。 |
+| 串口突然没输出，但刚才还在跑 | 用 CubeProgrammer 读内存（`-c … -r32`）会把 CPU 停在 halt 状态。执行 `STM32_Programmer_CLI -c port=SWD -rst -run` 或重新烧写。 |
+| 一用 SWD，串口就彻底没声音 | ST-LINK 的虚拟串口在 SWD 占用期间会停止送数据。不要边调试边抓日志；把 ST-LINK 的 USB 拔插一次即可恢复。 |
+| `verify.ps1` 只看到心跳、没有 `[BOOT]` | 启动输出在串口打开之前就发完了。`monitor.ps1 -Reset` 会发 `@RST` 让固件在端口已打开的情况下自己复位。 |
 | `Cannot convert value "-2" to type UInt32` | PowerShell 5.1 把 `0xFFFFFFFE` 当 Int32 `-2`。用 `x - (x -band 1)` 抹位，别用十六进制字面量。 |
 | 改过脚本后行为古怪 | `tools/*.ps1` 必须保持**纯 ASCII**；PS 5.1 按 ANSI 读无 BOM 脚本，非 ASCII 会变乱码。 |
+| 板子每 2 秒左右复位一次 | 看门狗没被喂：主循环卡住了。看 `[BOOT] reset=IWDG`，再用 `tools\crashdump.ps1`。 |
 | 板子无限重启且无输出 | 跑 `tools\crashdump.ps1`，它会指出出错的函数。 |
 
 给 AI 的完整规则见 [AGENTS.md](../AGENTS.md)。
