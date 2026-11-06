@@ -8,8 +8,25 @@ powershell -ExecutionPolicy Bypass -File tools\build.ps1   # compile + link
 powershell -ExecutionPolicy Bypass -File tools\test.ps1    # host unit tests
 ```
 
-`tools\setup.ps1` needs network access to `codeload.github.com`. Everything it
-downloads goes to `external/`, which is git-ignored.
+`tools\setup.ps1` needs network access to `codeload.github.com` and
+`www.keil.com/pack`. The firmware package goes to `external/`, which is
+git-ignored; the Keil device pack is installed into the MDK `PACK` directory.
+
+## The two build tracks
+
+| Command | What it builds |
+|---------|----------------|
+| `tools\build.ps1 [-Config Release]` | CMake + armclang → `build\<Config>\firmware.axf/.hex/.bin` |
+| `tools\build.ps1 -Keil [-Config Release]` | `MDK-ARM\STM32F103C8T6.uvprojx` via UV4 → `MDK-ARM\Objects\<Config>\` |
+
+Both drive **Arm Compiler 6**, so they agree. As of the last verification they
+produce **byte-identical `.bin` images** in both configurations.
+
+The Keil project is only a container: sources, defines, include paths and the
+scatter file all point back at the same files CMake uses. `-Keil` cross-checks
+the `.uvprojx` file list against `CMakeLists.txt` and refuses to build if they
+have drifted, so a forgotten `<File>` entry cannot silently ship a different
+firmware.
 
 ## Every day
 
@@ -48,6 +65,7 @@ COM ports.
 | `tests/` | Host-side unit tests |
 | `tools/` | build / flash / monitor / verify / crashdump / size |
 | `cmake/` | armclang toolchain file, scatter file |
+| `MDK-ARM/` | Keil project (`Debug` / `Release` targets) |
 | `external/` | STM32CubeF1 + HAL (downloaded) |
 
 Rules for agents and humans: [AGENTS.md](../AGENTS.md).

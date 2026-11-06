@@ -5,11 +5,13 @@
 #
 # What it does:
 #   1. Verifies armclang/armlink from the local MDK install.
-#   2. Downloads STM32CubeF1 (CMSIS + HAL) into external/, because the CubeF1
+#   2. Installs the Keil STM32F1xx device pack if the MDK-ARM track needs it.
+#   3. Downloads STM32CubeF1 (CMSIS + HAL) into external/, because the CubeF1
 #      repo keeps the HAL in git submodules that a plain tarball does not carry.
-#   3. Prints the next command to run.
+#   4. Prints the next command to run.
 #
-# Everything it downloads is git-ignored; nothing is written outside the repo.
+# Everything it downloads is git-ignored. The only thing written outside the
+# repo is the device pack, which goes into the Keil PACK directory.
 
 [CmdletBinding()]
 param(
@@ -40,6 +42,61 @@ if (-not $script:CmakeExe) { Write-Fail 'cmake not found.'; exit 1 }
 Write-Ok "cmake  $script:CmakeExe"
 if (-not $script:NinjaExe) { Write-Warn 'ninja not found; CMake will fall back to another generator.' }
 else { Write-Ok "ninja  $script:NinjaExe" }
+
+# --- Keil device pack: needed by the MDK-ARM track only --------------------
+# tools/build.ps1 (CMake) does not need it; tools/build.ps1 -Keil does, because
+# UV4 resolves the device, its memory map and the flash algorithm from the pack.
+Write-Step 'Checking Keil device pack (Keil.STM32F1xx_DFP)'
+$dfpVersion  = '2.4.1'
+$packRoot   = $env:KEIL_PACK_ROOT
+if (-not $packRoot -and $script:ArmClangRoot) {
+    $packRoot = Join-Path (Split-Path -Parent $script:ArmClangRoot) 'PACK'
+}
+$dfpDir  = $null
+$dfpPdsc = $null
+if ($packRoot) {
+    $dfpDir  = Join-Path $packRoot "Keil\STM32F1xx_DFP\$dfpVersion"
+    $dfpPdsc = Join-Path $dfpDir 'Keil.STM32F1xx_DFP.pdsc'
+}
+
+if ($dfpPdsc -and (Test-Path -LiteralPath $dfpPdsc) -and (-not $Force)) {
+    Write-Ok "STM32F1 device pack $dfpVersion"
+}
+elseif ($SkipDownload) {
+    Write-Warn 'SkipDownload: device pack not installed; tools/build.ps1 -Keil will fail.'
+}
+elseif (-not $packRoot) {
+    Write-Warn 'Keil PACK root not found; set KEIL_PACK_ROOT to install the device pack.'
+}
+else {
+    $packFile = Join-Path $script:RepoRoot "external\packs\Keil.STM32F1xx_DFP.$dfpVersion.pack"
+    if (-not (Test-Path -LiteralPath $packFile)) {
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $packFile) | Out-Null
+        $url = "https://www.keil.com/pack/Keil.STM32F1xx_DFP.$dfpVersion.pack"
+        Write-Step "GET $url"
+        & curl.exe -sS -L --max-time 900 -o $packFile $url
+        if ($LASTEXITCODE -ne 0) {
+            Write-Fail "device pack download failed ($LASTEXITCODE). Check network access to keil.com."
+            exit 1
+        }
+    }
+    Write-Step "Installing into $dfpDir"
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    if (Test-Path -LiteralPath $dfpDir) { Remove-Item -LiteralPath $dfpDir -Recurse -Force }
+    New-Item -ItemType Directory -Force -Path $dfpDir | Out-Null
+    try {
+        [IO.Compression.ZipFile]::ExtractToDirectory($packFile, $dfpDir)
+    }
+    catch {
+        Write-Fail "could not extract the pack into $dfpDir. Run this script as administrator."
+        exit 1
+    }
+    if (-not (Test-Path -LiteralPath $dfpPdsc)) {
+        Write-Fail "pack installed but $dfpPdsc is missing."
+        exit 1
+    }
+    Write-Ok "STM32F1 device pack $dfpVersion"
+}
 
 if ($SkipDownload) {
     Write-Warn 'SkipDownload: firmware package not touched.'

@@ -19,8 +19,12 @@ external/
 *.lst
 *.dep
 *.uvguix.*
+*.uvoptx
+*.uvprojx.bak
 Objects/
 Listings/
+MDK-ARM/DebugConfig/
+MDK-ARM/RTE/
 
 # OS / editor noise
 Thumbs.db
