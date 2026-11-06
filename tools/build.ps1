@@ -78,7 +78,7 @@ function Assert-KeilSourcesMatch {
         Write-Fail 'MDK-ARM project is out of sync with CMakeLists.txt'
         foreach ($m in $missing) { Write-Host "  missing from .uvprojx: $m" -ForegroundColor Red }
         foreach ($e in $extra) { Write-Host "  not in CMakeLists.txt: $e" -ForegroundColor Yellow }
-        Write-Host 'Add or remove the <File> entry in MDK-ARM\STM32F103C8T6.uvprojx.' -ForegroundColor Red
+        Write-Host 'Add or remove the <File> entry in MDK-ARM\STM32F103C6T6.uvprojx.' -ForegroundColor Red
         return 1
     }
     return 0

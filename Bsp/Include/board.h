@@ -1,4 +1,4 @@
-/* Board constants for STM32F103C8T6 ("Blue Pill").
+/* Board constants for STM32F103C6T6 ("Blue Pill", 32 KB part).
  *
  * Single source of truth for pin mapping, clocks and memory budget. If the
  * hardware changes, change it here - AGENTS.md tells the AI to read this file
@@ -13,7 +13,7 @@ extern "C" {
 
 #include "stm32f1xx_hal.h"
 
-#define BOARD_MCU_NAME        "STM32F103C8T6"
+#define BOARD_MCU_NAME        "STM32F103C6T6"
 #define BOARD_CORE            "Cortex-M3"
 
 #define BOARD_HSE_HZ          8000000U
@@ -21,8 +21,8 @@ extern "C" {
 #define BOARD_APB1_HZ         36000000U
 #define BOARD_APB2_HZ         72000000U
 
-#define BOARD_FLASH_BYTES     (64U * 1024U)
-#define BOARD_RAM_BYTES       (20U * 1024U)
+#define BOARD_FLASH_BYTES     (32U * 1024U)
+#define BOARD_RAM_BYTES       (10U * 1024U)
 
 /* On-board LED: PC13, active low (LED lit when pin is driven low). */
 #define BOARD_LED_PORT        GPIOC

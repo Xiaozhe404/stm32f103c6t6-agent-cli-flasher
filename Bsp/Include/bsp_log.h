@@ -4,7 +4,7 @@
  * make about the running target comes through here. Three rules follow:
  *   1. Logging must never block the control loop for long -> data is queued in
  *      a ring buffer and pushed out by bsp_log_flush().
- *   2. Formatting must avoid float (%f) - it drags in ~6 KB of code on a 64 KB
+ *   2. Formatting must avoid float (%f) - it drags in ~6 KB of code on a 32 KB
  *      part. Log integers and scale them yourself.
  *   3. Lines are machine parsable ("[HB] t=..." ) so tools/verify.ps1 can
  *      assert on them.

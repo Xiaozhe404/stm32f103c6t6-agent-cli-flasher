@@ -1,4 +1,4 @@
-# AGENTS.md — STM32F103C8T6 firmware
+# AGENTS.md — STM32F103C6T6 firmware
 
 This file is the contract for any AI agent working in this repository.
 Read it before touching code. It encodes facts that are expensive to rediscover
@@ -8,12 +8,12 @@ and cheap to respect.
 
 ## 1. What this project is
 
-Bare-metal **STM32F103C8T6** ("Blue Pill") firmware on STM32Cube **HAL**.
+Bare-metal **STM32F103C6T6** ("Blue Pill") firmware on STM32Cube **HAL**.
 
 | Fact | Value |
 |------|-------|
 | Core | Cortex-M3, no FPU (all floats are soft-float, avoid them) |
-| Flash / RAM | 64 KB / 20 KB — hard limits, see §5 |
+| Flash / RAM | 32 KB / 10 KB — hard limits, see §5 |
 | SYSCLK | 72 MHz from 8 MHz HSE, PLL x9 |
 | Bus clocks | AHB 72 MHz, APB1 36 MHz, APB2 72 MHz |
 | Fallback | If HSE does not start the code runs on HSI/2 x16 = 64 MHz and logs `[WARN]` |
@@ -25,6 +25,27 @@ There is **no SWO trace pin** on this board (the cheap ST-LINK V2 dongles only
 wire SWDIO/SWCLK/GND/3V3). UART is the only observation channel. Never design
 a change that can only be validated with a debugger attached.
 
+### Measured facts about the board on the bench (2026-11)
+
+Do not re-derive these, and do not "fix" them back to an F103C8T6 layout:
+
+| Probe | Result |
+|-------|--------|
+| `DBGMCU_IDCODE` | `0x412` — low-density, **not** the C8's `0x410` |
+| Flash-size register `0x1FFFF7E0` | `0x0020` = 32 KB |
+| RAM readable up to | `0x200027FF`; `0x20002800` onwards reads fail |
+| `RCC_CFGR` after boot | `0x001D040A` → SWS=PLL, PLLSRC=HSE, PLLMUL=x9 = 72 MHz |
+| Log ring buffer after ~10 s | `head == tail == 392`, `dropped == 0`, `s_ready == 1` |
+
+Two consequences the next agent should know:
+
+1. The part is a 32 KB / 10 KB device sold as a Blue Pill. Building for it also
+   runs unchanged on a real C8T6, so this layout is the safe default.
+2. The ST-LINK's virtual COM port (COM7) is **not** wired to PA9/PA10 on this
+   rig, so `tools\monitor.ps1` sees zero bytes even though the firmware is
+   transmitting. Wire VCP-TX → PA10 and VCP-RX → PA9 (and GND) before trusting
+   `tools\verify.ps1`'s observe step.
+
 ---
 
 ## 2. Two build tracks — same compiler
@@ -32,7 +53,7 @@ a change that can only be validated with a debugger attached.
 | Track | Command | Purpose |
 |-------|---------|---------|
 | **CMake + armclang** | `powershell -ExecutionPolicy Bypass -File tools/build.ps1 [-Config Release]` | The track agents use. Fast, emits `compile_commands.json`, `-Wall -Wextra`, size report. |
-| **Keil MDK (UV4)** | `... tools/build.ps1 -Keil [-Config Release]` | The track that ships. `MDK-ARM/STM32F103C8T6.uvprojx`, targets `Debug` and `Release`. |
+| **Keil MDK (UV4)** | `... tools/build.ps1 -Keil [-Config Release]` | The track that ships. `MDK-ARM/STM32F103C6T6.uvprojx`, targets `Debug` and `Release`. |
 
 Both use **Arm Compiler 6 (armclang)**, so they do not diverge: the two tracks
 currently produce **byte-identical `.bin` images** in both configurations
@@ -45,7 +66,7 @@ The Keil track needs `Keil.STM32F1xx_DFP` installed under
 **Adding a source file means editing three places**, and `-Keil` refuses to run
 if they disagree:
 1. `APP_SOURCES` / `HAL_SOURCES` in `CMakeLists.txt`,
-2. the matching `<Group>` in `MDK-ARM/STM32F103C8T6.uvprojx`,
+2. the matching `<Group>` in `MDK-ARM/STM32F103C6T6.uvprojx`,
 3. the include path, if the new file lives in a new directory.
 
 The compiler options are duplicated too: `Cads/MiscControls` in the `.uvprojx`
@@ -53,7 +74,7 @@ carries the same `-std=c99 -ffunction-sections -fdata-sections -fno-common
 -Wextra -Wno-unused-parameter` as `target_compile_options`. Keep them equal.
 
 The CMake track does **not** use CMake's linker driver: `armlink` is invoked from
-`CMakeLists.txt` with `cmake/stm32f103c8tx.sct`. Changing memory layout means
+`CMakeLists.txt` with `cmake/stm32f103c6tx.sct`. Changing memory layout means
 editing that scatter file, not a linker script.
 
 ---
@@ -114,9 +135,9 @@ exits 0. Never claim a firmware change works from reading the code alone.
 
 ## 5. Hard constraints on this part
 
-1. **64 KB flash / 20 KB RAM.** The build prints totals; `tools\size.ps1` enforces
+1. **32 KB flash / 10 KB RAM.** The build prints totals; `tools\size.ps1` enforces
    a budget. Stack is 1 KB and the crash blackbox reserves the last 256 bytes of
-   RAM (`0x20004F00`–`0x20004FFF`). Do not grow the stack without re-measuring.
+   RAM (`0x20002700`–`0x200027FF`). Do not grow the stack without re-measuring.
 2. **No `%f` in printf.** Floating-point formatting pulls in several KB of
    library code. Log integers and scale them (`temp_mc` = millidegrees).
 3. **No blocking in interrupt context.** ISRs set a flag or push to a ring
@@ -153,8 +174,9 @@ exits 0. Never claim a firmware change works from reading the code alone.
    on the next boot. `cause=...` lines name the fault bits.
 3. Map PC to source: `tools\crashdump.ps1` already does symbol lookup; for
    file:line it uses `arm-none-eabi-gdb` when available.
-4. To prove the blackbox path end to end, build with
-   `-DCMAKE_C_FLAGS=-DBSP_FAULT_SELFTEST` and call `bsp_fault_trigger_selftest()`.
+4. To prove the blackbox path end to end, configure with
+   `-DBSP_FAULT_SELFTEST=ON` and call `bsp_fault_trigger_selftest()`. The option
+   also adds `--keep` so armlink does not drop the unreferenced hook.
 
 ---
 

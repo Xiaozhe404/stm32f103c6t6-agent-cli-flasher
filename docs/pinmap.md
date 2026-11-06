@@ -1,4 +1,4 @@
-# Pin map — STM32F103C8T6 (Blue Pill)
+# Pin map — STM32F103C6T6 (Blue Pill)
 
 Authoritative C definitions live in [board.h](../Bsp/Include/board.h). Change
 both together, or nothing.
@@ -36,6 +36,6 @@ boards; check the schematic before using them.
 
 | Region | Start | Size |
 |--------|-------|------|
-| Flash | `0x0800_0000` | 64 KB |
-| SRAM (RW + ZI + stack) | `0x2000_0000` | 20 KB minus blackbox |
+| Flash | `0x0800_0000` | 32 KB |
+| SRAM (RW + ZI + stack) | `0x2000_0000` | 10 KB minus blackbox |
 | Crash blackbox (UNINIT) | `0x2000_4F00` | 256 B |

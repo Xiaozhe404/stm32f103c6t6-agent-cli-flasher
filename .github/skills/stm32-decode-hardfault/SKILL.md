@@ -1,6 +1,6 @@
 ---
 name: stm32-decode-hardfault
-description: Diagnose a crash or silent reset on the STM32F103C8T6 target using the on-chip crash blackbox. Use when the board stops logging, resets itself, or a [FAULT] record appears on the UART.
+description: Diagnose a crash or silent reset on the STM32F103C6T6 target using the on-chip crash blackbox. Use when the board stops logging, resets itself, or a [FAULT] record appears on the UART.
 ---
 
 # Decode a HardFault

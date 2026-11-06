@@ -25,8 +25,15 @@ typedef struct {
 } fault_record_t;
 
 /* Lives in the UNINIT scatter region: never zeroed by the C startup, so it
- * survives NVIC_SystemReset(). See cmake/stm32f103c8tx.sct. */
-static fault_record_t s_record __attribute__((section(".noinit"), used));
+ * survives NVIC_SystemReset(). See cmake/stm32f103c6tx.sct.
+ *
+ * The section has to be ZI (SHT_NOBITS). armlink only skips initialization for
+ * ZI output sections inside an UNINIT region; a section() attribute would make
+ * armclang emit an RW section whose all-zero contents get copied from flash on
+ * every boot, silently wiping the record. */
+#pragma clang section bss = ".noinit"
+static fault_record_t s_record __attribute__((used));
+#pragma clang section bss = ""
 
 static const char *const k_mmfsr[8] = {
     "IACCVIOL", "DACCVIOL", "", "MUNSTKERR", "MSTKERR", "MLSPERR", "", "MMARVALID"

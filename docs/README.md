@@ -1,4 +1,4 @@
-# STM32F103C8T6 firmware — quick start
+# STM32F103C6T6 firmware — quick start
 
 ## First time
 
@@ -17,7 +17,7 @@ git-ignored; the Keil device pack is installed into the MDK `PACK` directory.
 | Command | What it builds |
 |---------|----------------|
 | `tools\build.ps1 [-Config Release]` | CMake + armclang → `build\<Config>\firmware.axf/.hex/.bin` |
-| `tools\build.ps1 -Keil [-Config Release]` | `MDK-ARM\STM32F103C8T6.uvprojx` via UV4 → `MDK-ARM\Objects\<Config>\` |
+| `tools\build.ps1 -Keil [-Config Release]` | `MDK-ARM\STM32F103C6T6.uvprojx` via UV4 → `MDK-ARM\Objects\<Config>\` |
 
 Both drive **Arm Compiler 6**, so they agree. As of the last verification they
 produce **byte-identical `.bin` images** in both configurations.

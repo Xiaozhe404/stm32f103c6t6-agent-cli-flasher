@@ -3,10 +3,10 @@
 Full rules: [AGENTS.md](../AGENTS.md). The short version:
 
 ## Non-negotiables
-- **STM32F103C8T6**: 64 KB flash, 20 KB RAM, Cortex-M3, no FPU. `tools\size.ps1` is the budget gate.
+- **STM32F103C6T6**: 32 KB flash, 10 KB RAM, Cortex-M3, no FPU. `tools\size.ps1` is the budget gate.
 - **Verify before claiming success.** `tools\build.ps1` then `tools\test.ps1` then
   `tools\size.ps1`; with hardware attached also `tools\verify.ps1`.
-- **Never edit** `external/`, startup `.s` files, or `cmake/stm32f103c8tx.sct`
+- **Never edit** `external/`, startup `.s` files, or `cmake/stm32f103c6tx.sct`
   without being asked. Edit `MDK-ARM/*.uvprojx` only together with `CMakeLists.txt`.
 - **No `%f` printf, no malloc, no blocking in ISRs.**
 
@@ -31,6 +31,6 @@ currently emit byte-identical images — a disagreement between them is a defect
 not a workaround.
 
 Adding a source file means touching **both** `CMakeLists.txt` and the matching
-`<Group>` in `MDK-ARM\STM32F103C8T6.uvprojx`; `-Keil` fails the build if they
+`<Group>` in `MDK-ARM\STM32F103C6T6.uvprojx`; `-Keil` fails the build if they
 disagree. Same for compiler options: `Cads/MiscControls` in the `.uvprojx` must
 stay equal to `target_compile_options` in `CMakeLists.txt`.

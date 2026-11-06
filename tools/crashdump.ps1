@@ -20,7 +20,7 @@ param(
 . "$PSScriptRoot\env.ps1"
 
 $flashStart = [uint32]0x08000000
-$flashEnd   = [uint32]0x08010000   # STM32F103C8T6 = 64 KB
+$flashEnd   = [uint32]0x08008000   # STM32F103C6T6 = 32 KB
 
 if (-not [System.IO.Path]::IsPathRooted($Log)) { $Log = Join-Path $script:RepoRoot $Log }
 if (-not (Test-Path -LiteralPath $Log)) {

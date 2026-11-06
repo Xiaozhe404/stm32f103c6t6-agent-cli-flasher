@@ -1,4 +1,4 @@
-/* HAL configuration for STM32F103C8T6.
+/* HAL configuration for STM32F103C6T6.
  *
  * Trimmed from ST's stm32f1xx_hal_conf_template.h: only the modules this
  * project compiles are enabled. Enabling a new module means adding it here AND

@@ -1,4 +1,4 @@
-# Arm Compiler 6 (armclang) toolchain for STM32F103C8T6.
+# Arm Compiler 6 (armclang) toolchain for STM32F103C6T6.
 #
 # Why armclang instead of arm-none-eabi-gcc:
 #   * It is the exact compiler Keil MDK ships, so the CMake build and the

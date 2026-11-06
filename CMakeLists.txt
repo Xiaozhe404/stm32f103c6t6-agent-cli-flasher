@@ -8,7 +8,7 @@ if(POLICY CMP0123)
 endif()
 
 # ---------------------------------------------------------------------------
-# STM32F103C8T6 application - build driven by Arm Compiler 6 (armclang/armlink)
+# STM32F103C6T6 application - build driven by Arm Compiler 6 (armclang/armlink)
 #
 #   cmake --preset Debug
 #   cmake --build --preset Debug
@@ -21,8 +21,8 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
   message(FATAL_ERROR "Configure with -DCMAKE_TOOLCHAIN_FILE=cmake/armclang-toolchain.cmake (use the CMake presets).")
 endif()
 
-set(MCU_NAME "STM32F103C8Tx")
-set(MCU_DEFINE "STM32F103xB")
+set(MCU_NAME "STM32F103C6Tx")
+set(MCU_DEFINE "STM32F103x6")
 
 # --- Firmware package (STM32CubeF1) ---------------------------------------
 if(NOT STM32CUBE_F1_ROOT)
@@ -93,6 +93,16 @@ target_compile_definitions(fw_obj PRIVATE
   USE_HAL_DRIVER
 )
 
+# Adds bsp_fault_trigger_selftest(), which faults on purpose so the crash
+# blackbox can be proven end to end. Off by default; it costs flash for nothing.
+option(BSP_FAULT_SELFTEST "Compile the crash-blackbox self test" OFF)
+set(SELFTEST_LINK_ARGS "")
+if(BSP_FAULT_SELFTEST)
+  target_compile_definitions(fw_obj PRIVATE BSP_FAULT_SELFTEST)
+  # Nothing calls the hook, so armlink's --remove would drop it.
+  list(APPEND SELFTEST_LINK_ARGS "--keep=bsp_fault_trigger_selftest")
+endif()
+
 target_compile_options(fw_obj PRIVATE
   -std=c99
   -ffunction-sections
@@ -110,15 +120,15 @@ else()
 endif()
 
 # --- Startup (ARM-syntax assembler, compiled outside CMake's language rules) ---
-set(STARTUP_S "${CMSIS_DEVICE_DIR}/Source/Templates/arm/startup_stm32f103xb.s")
-set(STARTUP_O "${CMAKE_BINARY_DIR}/startup_stm32f103xb.o")
+set(STARTUP_S "${CMSIS_DEVICE_DIR}/Source/Templates/arm/startup_stm32f103x6.s")
+set(STARTUP_O "${CMAKE_BINARY_DIR}/startup_stm32f103x6.o")
 
 add_custom_command(
   OUTPUT  ${STARTUP_O}
   COMMAND ${CMAKE_C_COMPILER} --target=arm-arm-none-eabi -mcpu=cortex-m3 -mthumb
           -masm=armasm -c ${STARTUP_S} -o ${STARTUP_O}
   DEPENDS ${STARTUP_S}
-  COMMENT "armclang: startup_stm32f103xb.s"
+  COMMENT "armclang: startup_stm32f103x6.s"
   VERBATIM
 )
 
@@ -135,11 +145,12 @@ add_custom_command(
   OUTPUT  ${AXF} ${BIN} ${HEX} ${SIZES} ${SYMBOLS}
   COMMAND ${ARMCLANG_BIN}/armlink.exe
             --cpu=Cortex-M3
-            --scatter=${CMAKE_CURRENT_SOURCE_DIR}/cmake/stm32f103c8tx.sct
+            --scatter=${CMAKE_CURRENT_SOURCE_DIR}/cmake/stm32f103c6tx.sct
             --map
             --datacompressor=off
             --info=sizes,totals
             --summary_stderr
+            ${SELFTEST_LINK_ARGS}
             -o ${AXF}
             $<TARGET_OBJECTS:fw_obj>
             ${STARTUP_O}

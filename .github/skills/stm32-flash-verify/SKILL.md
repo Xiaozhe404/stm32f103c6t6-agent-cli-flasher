@@ -1,6 +1,6 @@
 ---
 name: stm32-flash-verify
-description: Build, flash and verify firmware on the STM32F103C8T6 board in this repo. Use after any firmware change to prove it compiles, fits, and still emits the expected UART boot/heartbeat markers.
+description: Build, flash and verify firmware on the STM32F103C6T6 board in this repo. Use after any firmware change to prove it compiles, fits, and still emits the expected UART boot/heartbeat markers.
 ---
 
 # Flash and verify
@@ -17,7 +17,7 @@ Goal: turn "the code looks right" into "the board said so".
 2. Run the host tests when logic under `App/` changed:
    `powershell -ExecutionPolicy Bypass -File tools\test.ps1`
 
-3. Check the memory budget on a 64 KB / 20 KB part:
+3. Check the memory budget on a 32 KB / 10 KB part:
    `powershell -ExecutionPolicy Bypass -File tools\size.ps1`
    Exits 1 above 90 % flash or 70 % RAM.
 

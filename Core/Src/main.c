@@ -3,7 +3,7 @@
  * Shape matches what STM32CubeMX generates for an MDK-ARM project, so a .ioc
  * regeneration only replaces the two USER CODE blocks at the bottom.
  *
- * Clock plan (F103C8T6):
+ * Clock plan (F103C6T6):
  *   HSE 8 MHz x PLL9 = 72 MHz SYSCLK, AHB /1, APB1 /2 (36 MHz), APB2 /1 (72 MHz)
  *   Fallback when the crystal does not start:
  *   HSI 8 MHz /2 x PLL16 = 64 MHz SYSCLK, same bus dividers.

@@ -1,4 +1,4 @@
-# size.ps1 - budget guard for a 64 KB / 20 KB part.
+# size.ps1 - budget guard for a 32 KB / 10 KB part.
 #
 #   tools\size.ps1
 #   tools\size.ps1 -Config Release -FlashLimitPct 85 -RamLimitPct 60
@@ -15,8 +15,8 @@ param(
 
 . "$PSScriptRoot\env.ps1"
 
-$flashSize = 64KB
-$ramSize   = 20KB
+$flashSize = 32KB
+$ramSize   = 10KB
 
 $configDir = Get-ConfigDir $Config
 $sizesFile = Join-Path $configDir 'firmware_sizes.txt'
